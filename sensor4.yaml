@@ -1,0 +1,93 @@
+esphome:
+  name: sensor4
+  platform: ESP8266
+  board: esp12e
+  on_boot:
+    then:
+      - script.execute: consider_deep_sleep
+        
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "e656a6a4f78cb65b31cf71e4c2499172"
+
+wifi:
+  ssid: "qsvMIMt8Fm6NV3"
+  password: "UbKNUJakLBLpOh"
+  fast_connect: true
+  power_save_mode: HIGH
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sensor4 Fallback Hotspot"
+    password: "2fzN6rFPL0w0"
+
+captive_portal:
+
+## Deep Sleep
+
+deep_sleep:
+  id: deep_sleep_control
+  sleep_duration: 600s
+
+# Will only pick up a value if this device is configured in Home Assistant > Integrations
+# If the device isn't configured, or Home Assistant is offline, it'll default to false
+binary_sensor:
+  - platform: homeassistant
+    id: prevent_deep_sleep
+    entity_id: input_boolean.sensor4_ota_enable
+    on_state:
+      then:
+      - if:
+          condition:
+            binary_sensor.is_on: prevent_deep_sleep
+          then:
+            - logger.log: 'prevent_deep_sleep = ON'
+            - deep_sleep.prevent: deep_sleep_control
+          else:
+            - logger.log: 'prevent_deep_sleep = OFF'
+            - deep_sleep.enter: deep_sleep_control
+
+script:
+  - id: consider_deep_sleep
+    mode: queued
+    then:
+      - deep_sleep.prevent: deep_sleep_control
+      - delay: 15s
+      - if:
+          condition:
+            binary_sensor.is_on: prevent_deep_sleep
+          then:
+            - logger.log: '**** Skipping sleep, per prevent_deep_sleep'
+          else:
+            - deep_sleep.enter: deep_sleep_control
+      - script.execute: consider_deep_sleep
+
+# Example configuration entry
+dallas:
+  pin: GPIO13
+  update_interval: 20s
+
+# Individual sensors
+sensor:
+  - platform: dallas
+    address: 0xED01144AAD4FAA28
+    name: "Sensor 4 Temperature"
+    id: "sensor4_temperature"
+    
+  - platform: adc
+    pin: A0
+    name: "Sensor 4 Battery Voltage"
+    id: "sensor4_battery_voltage"
+    update_interval: 20s
+    filters:
+      - median:
+      - calibrate_linear:
+          - 0 -> 0
+          - 0.62 -> 3.73
+          - 0.72 -> 4.22

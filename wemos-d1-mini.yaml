@@ -1,0 +1,52 @@
+esphome:
+  name: wemos-d1-mini
+  platform: ESP8266
+  board: d1_mini
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "85e1cf199365329d8956e8cbdbf6c023"
+
+wifi:
+  ssid: "qsvMIMt8Fm6NV3"
+  password: "UbKNUJakLBLpOh"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Wemos-D1-Mini Fallback Hotspot"
+    password: "NqJINvH6jNGn"
+
+captive_portal:
+
+sensor:
+  - platform: adc
+    pin: A0
+    id: cds
+    update_interval: 0.1s
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+i2c:
+  sda: 4
+  scl: 5
+  scan: true
+  id: bus_a
+  
+font:
+  - file: "fonts/arial.ttf"
+    id: font_arial
+    size: 20
+  
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 64x48"
+    address: 0x3C
+    lambda: |-
+      it.printf(0, 14, id(font_arial), "%.2f", id(cds).state);

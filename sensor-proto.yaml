@@ -1,0 +1,81 @@
+esphome:
+  name: sensor-proto
+  platform: ESP8266
+  board: esp12e
+  on_boot:
+    then:
+      - script.execute: consider_deep_sleep
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "62bccd36f9335e8b39c9c3cba6e6a099"
+
+wifi:
+  ssid: "qsvMIMt8Fm6NV3"
+  password: "UbKNUJakLBLpOh"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sensor-Proto Fallback Hotspot"
+    password: "GJZjRgBZDlt9"
+
+captive_portal:
+
+## Deep Sleep
+
+deep_sleep:
+  id: deep_sleep_control
+  sleep_duration: 600s
+
+# Will only pick up a value if this device is configured in Home Assistant > Integrations
+# If the device isn't configured, or Home Assistant is offline, it'll default to false
+binary_sensor:
+  - platform: homeassistant
+    id: prevent_deep_sleep
+    entity_id: input_boolean.proto_sensor_ota_enable
+
+script:
+  - id: consider_deep_sleep
+    mode: queued
+    then:
+      - deep_sleep.prevent: deep_sleep_control
+      - delay: 15s
+      - if:
+          condition:
+            binary_sensor.is_on: prevent_deep_sleep
+          then:
+            - logger.log: '**** Skipping sleep, per prevent_deep_sleep'
+          else:
+            - deep_sleep.enter: deep_sleep_control
+      - script.execute: consider_deep_sleep
+
+# Example configuration entry
+dallas:
+  pin: GPIO13
+  update_interval: 10s
+
+# Individual sensors
+sensor:
+  - platform: dallas
+    address: 0xC80000068A97BF28
+    name: "Proto Sensor Temperature"
+    id: "proto_sensor_temperature"
+    
+  - platform: adc
+    pin: A0
+    name: "Proto Sensor Battery Voltage"
+    id: "proto_sensor_battery_voltage"
+    update_interval: 10s
+    filters:
+      - calibrate_linear:
+        - 0 -> 0
+        - 0.67 -> 3.45
+        - 0.66 -> 3.41
+        - 0.65 -> 3.37
+        - 0.75 -> 3.90
+        - 0.81 -> 4.24
